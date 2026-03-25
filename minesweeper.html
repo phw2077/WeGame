@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>经典扫雷</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #c0c0c0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+            user-select: none;
+        }
+        .game-window {
+            background-color: #c0c0c0;
+            border-top: 3px solid #fff;
+            border-left: 3px solid #fff;
+            border-right: 3px solid #808080;
+            border-bottom: 3px solid #808080;
+            padding: 10px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #c0c0c0;
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+            padding: 5px 10px;
+            margin-bottom: 10px;
+        }
+        .counter {
+            background-color: black;
+            color: red;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 2px 5px;
+            border: 1px solid #808080;
+        }
+        #face {
+            font-size: 24px;
+            cursor: pointer;
+            border-top: 2px solid #fff;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #c0c0c0;
+        }
+        #face:active {
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-template-rows: repeat(10, 30px);
+            border-top: 3px solid #808080;
+            border-left: 3px solid #808080;
+            border-right: 3px solid #fff;
+            border-bottom: 3px solid #fff;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #c0c0c0;
+            border-top: 2px solid #fff;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .cell.revealed {
+            border: 1px solid #808080;
+            background-color: #c0c0c0;
+        }
+        .cell.mine { background-color: red; }
+        
+        .c1 { color: blue; } .c2 { color: green; } .c3 { color: red; }
+        .c4 { color: darkblue; } .c5 { color: darkred; } .c6 { color: teal; }
+        
+        .home-btn {
+            margin-top: 20px;
+            color: #333;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .instructions {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #555;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-window">
+        <div class="header">
+            <div class="counter" id="mines-count">010</div>
+            <div id="face" onclick="init()">🙂</div>
+            <div class="counter" id="timer">000</div>
+        </div>
+        <div class="board" id="board"></div>
+    </div>
+    
+    <div class="instructions">电脑: 左键翻开，右键插旗。<br>手机: 短按翻开，长按插旗。</div>
+    <a href="index.html" class="home-btn">⬅️ 返回主页</a>
+
+    <script>
+        const ROWS = 10;
+        const COLS = 10;
+        const MINES = 10;
+        
+        let board = [];
+        let minePositions = [];
+        let gameOver = false;
+        let flags = 0;
+        let time = 0;
+        let timerInterval;
+        let firstClick = true;
+
+        const boardEl = document.getElementById('board');
+        const faceEl = document.getElementById('face');
+        const minesCountEl = document.getElementById('mines-count');
+        const timerEl = document.getElementById('timer');
+
+        function init() {
+            boardEl.innerHTML = '';
+            board = [];
+            minePositions = [];
+            gameOver = false;
+            flags = 0;
+            time = 0;
+            firstClick = true;
+            faceEl.innerText = '🙂';
+            minesCountEl.innerText = String(MINES).padStart(3, '0');
+            timerEl.innerText = '000';
+            clearInterval(timerInterval);
+
+            for (let r = 0; r < ROWS; r++) {
+                let row = [];
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    
+                    // 左键点击
+                    cell.addEventListener('click', () => handleClick(r, c));
+                    
+                    // 右键插旗
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        handleFlag(r, c);
+                    });
+
+                    // 手机长按插旗
+                    let touchTimer;
+                    cell.addEventListener('touchstart', (e) => {
+                        touchTimer = setTimeout(() => {
+                            handleFlag(r, c);
+                        }, 500);
+                    });
+                    cell.addEventListener('touchend', () => clearTimeout(touchTimer));
+                    cell.addEventListener('touchmove', () => clearTimeout(touchTimer));
+
+                    boardEl.appendChild(cell);
+                    row.push({ isMine: false, revealed: false, flagged: false, el: cell });
+                }
+                board.push(row);
+            }
+        }
+
+        function placeMines(firstR, firstC) {
+            let placed = 0;
+            while (placed < MINES) {
+                let r = Math.floor(Math.random() * ROWS);
+                let c = Math.floor(Math.random() * COLS);
+                // 确保第一次点击的地方和周围都不是雷
+                if (!board[r][c].isMine && Math.abs(r - firstR) > 1 && Math.abs(c - firstC) > 1) {
+                    board[r][c].isMine = true;
+                    minePositions.push({r, c});
+                    placed++;
+                }
+            }
+        }
+
+        function handleClick(r, c) {
+            if (gameOver || board[r][c].revealed || board[r][c].flagged) return;
+
+            if (firstClick) {
+                firstClick = false;
+                placeMines(r, c);
+                timerInterval = setInterval(() => {
+                    time++;
+                    timerEl.innerText = String(Math.min(time, 999)).padStart(3, '0');
+                }, 1000);
+            }
+
+            if (board[r][c].isMine) {
+                revealAllMines();
+                board[r][c].el.classList.add('mine');
+                faceEl.innerText = '😵';
+                gameOver = true;
+                clearInterval(timerInterval);
+                return;
+            }
+
+            reveal(r, c);
+            checkWin();
+        }
+
+        function handleFlag(r, c) {
+            if (gameOver || board[r][c].revealed) return;
+            
+            const cell = board[r][c];
+            if (!cell.flagged && flags < MINES) {
+                cell.flagged = true;
+                cell.el.innerText = '🚩';
+                flags++;
+            } else if (cell.flagged) {
+                cell.flagged = false;
+                cell.el.innerText = '';
+                flags--;
+            }
+            minesCountEl.innerText = String(MINES - flags).padStart(3, '0');
+            checkWin();
+        }
+
+        function reveal(r, c) {
+            if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c].revealed || board[r][c].flagged) return;
+
+            const cell = board[r][c];
+            cell.revealed = true;
+            cell.el.classList.add('revealed');
+
+            let minesAround = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (r+i >= 0 && r+i < ROWS && c+j >= 0 && c+j < COLS && board[r+i][c+j].isMine) {
+                        minesAround++;
+                    }
+                }
+            }
+
+            if (minesAround > 0) {
+                cell.el.innerText = minesAround;
+                cell.el.classList.add(`c${minesAround}`);
+            } else {
+                // 空白块，递归翻开周围
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        reveal(r+i, c+j);
+                    }
+                }
+            }
+        }
+
+        function revealAllMines() {
+            minePositions.forEach(pos => {
+                const cell = board[pos.r][pos.c];
+                if (!cell.flagged) {
+                    cell.el.innerText = '💣';
+                    cell.el.classList.add('revealed');
+                }
+            });
+        }
+
+        function checkWin() {
+            let hiddenSafeCells = 0;
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (!board[r][c].isMine && !board[r][c].revealed) {
+                        hiddenSafeCells++;
+                    }
+                }
+            }
+            if (hiddenSafeCells === 0) {
+                gameOver = true;
+                faceEl.innerText = '😎';
+                clearInterval(timerInterval);
+                alert('恭喜过关！');
+            }
+        }
+
+        // 屏蔽右键菜单
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        
+        init();
+    </script>
+</body>
+</html>
