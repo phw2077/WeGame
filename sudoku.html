@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>经典数独</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+            color: #2c3e50;
+        }
+        h1 { margin-bottom: 10px; }
+        
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:active { transform: scale(0.95); }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 1px;
+            background-color: #34495e;
+            border: 2px solid #34495e;
+            width: 90vw;
+            max-width: 400px;
+            aspect-ratio: 1 / 1;
+        }
+        
+        .cell {
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s;
+        }
+        
+        /* 粗边框划分 3x3 宫格 */
+        .cell:nth-child(3n) { border-right: 2px solid #34495e; }
+        .cell:nth-child(9n) { border-right: none; }
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #34495e; }
+        
+        .cell.fixed {
+            color: #2c3e50;
+            background-color: #ecf0f1;
+            cursor: default;
+        }
+        .cell.input {
+            color: #3498db;
+        }
+        .cell.selected {
+            background-color: #bbdefb !important;
+        }
+        .cell.highlight {
+            background-color: #e3f2fd;
+        }
+        .cell.error {
+            color: #e74c3c;
+            background-color: #fadbd8 !important;
+        }
+        
+        /* 数字输入键盘 (适配手机) */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+            width: 90vw;
+            max-width: 400px;
+        }
+        .numpad-btn {
+            background-color: white;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 15px 0;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .numpad-btn.clear {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+        }
+        
+        .home-btn {
+            margin-top: 30px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .message {
+            margin-top: 15px;
+            height: 24px;
+            font-weight: bold;
+            color: #27ae60;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 数独</h1>
+    
+    <div class="controls">
+        <button onclick="generateGame('easy')">简单</button>
+        <button onclick="generateGame('medium')">中等</button>
+        <button onclick="generateGame('hard')">困难</button>
+    </div>
+    
+    <div class="board" id="board"></div>
+    <div class="message" id="message"></div>
+    
+    <div class="numpad" id="numpad">
+        <button class="numpad-btn" onclick="inputNumber(1)">1</button>
+        <button class="numpad-btn" onclick="inputNumber(2)">2</button>
+        <button class="numpad-btn" onclick="inputNumber(3)">3</button>
+        <button class="numpad-btn" onclick="inputNumber(4)">4</button>
+        <button class="numpad-btn" onclick="inputNumber(5)">5</button>
+        <button class="numpad-btn" onclick="inputNumber(6)">6</button>
+        <button class="numpad-btn" onclick="inputNumber(7)">7</button>
+        <button class="numpad-btn" onclick="inputNumber(8)">8</button>
+        <button class="numpad-btn" onclick="inputNumber(9)">9</button>
+        <button class="numpad-btn clear" onclick="inputNumber(0)">擦除</button>
+    </div>
+    
+    <a href="index.html" class="home-btn">⬅️ 返回主页</a>
+
+    <script>
+        const boardEl = document.getElementById('board');
+        const messageEl = document.getElementById('message');
+        let solution = [];
+        let currentGrid = [];
+        let selectedCellIndex = -1;
+
+        // 生成完整的有效数独盘面 (回溯法)
+        function generateSolution() {
+            let grid = Array(9).fill().map(() => Array(9).fill(0));
+            fillGrid(grid);
+            return grid;
+        }
+
+        function fillGrid(grid) {
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    if (grid[r][c] === 0) {
+                        let nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+                        for (let num of nums) {
+                            if (isValid(grid, r, c, num)) {
+                                grid[r][c] = num;
+                                if (fillGrid(grid)) return true;
+                                grid[r][c] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function isValid(grid, r, c, num) {
+            for (let i = 0; i < 9; i++) {
+                if (grid[r][i] === num || grid[i][c] === num) return false;
+            }
+            let startRow = Math.floor(r / 3) * 3;
+            let startCol = Math.floor(c / 3) * 3;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (grid[startRow + i][startCol + j] === num) return false;
+                }
+            }
+            return true;
+        }
+
+        // 挖空生成谜题
+        function generateGame(difficulty) {
+            solution = generateSolution();
+            currentGrid = JSON.parse(JSON.stringify(solution));
+            
+            let emptyCount = 0;
+            if (difficulty === 'easy') emptyCount = 30;
+            else if (difficulty === 'medium') emptyCount = 45;
+            else if (difficulty === 'hard') emptyCount = 55;
+
+            let removed = 0;
+            while (removed < emptyCount) {
+                let r = Math.floor(Math.random() * 9);
+                let c = Math.floor(Math.random() * 9);
+                if (currentGrid[r][c] !== 0) {
+                    currentGrid[r][c] = 0;
+                    removed++;
+                }
+            }
+            
+            selectedCellIndex = -1;
+            messageEl.innerText = '';
+            renderBoard();
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            for (let i = 0; i < 81; i++) {
+                let r = Math.floor(i / 9);
+                let c = i % 9;
+                let val = currentGrid[r][c];
+                
+                let cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                
+                if (val !== 0 && solution[r][c] === val) { // 如果是一开始就有的或者是填对的
+                    // 检查是否是初始固定数字
+                    let isInitial = false;
+                    // 这里为了简单，如果和solution一样，并且不是用户刚刚输入的（其实这需要额外状态记录）
+                    // 我们简化处理：初始生成的非0数字加 fixed 类
+                }
+                
+                // 更好的状态判断：
+                // 如果 val 不为0，显示它。
+                // 只有初始非0才是 fixed。我们可以在 render 时依靠 DOM 的 data 属性或者重建一个初始状态矩阵。
+                // 为了简单，我们只在生成时确定。
+                cell.innerText = val === 0 ? '' : val;
+                
+                cell.addEventListener('click', () => selectCell(i));
+                boardEl.appendChild(cell);
+            }
+            
+            // 标记固定格子
+            const cells = document.querySelectorAll('.cell');
+            for (let i = 0; i < 81; i++) {
+                let r = Math.floor(i / 9);
+                let c = i % 9;
+                if (currentGrid[r][c] !== 0) {
+                    cells[i].classList.add('fixed');
+                }
+            }
+        }
+
+        function selectCell(index) {
+            const cells = document.querySelectorAll('.cell');
+            if (cells[index].classList.contains('fixed')) return;
+
+            // 清除旧高亮
+            cells.forEach(c => {
+                c.classList.remove('selected');
+                c.classList.remove('highlight');
+            });
+
+            selectedCellIndex = index;
+            cells[index].classList.add('selected');
+
+            // 高亮同行、同列、同宫格
+            let r = Math.floor(index / 9);
+            let c = index % 9;
+            let startRow = Math.floor(r / 3) * 3;
+            let startCol = Math.floor(c / 3) * 3;
+
+            for (let i = 0; i < 81; i++) {
+                let ir = Math.floor(i / 9);
+                let ic = i % 9;
+                if (ir === r || ic === c || (ir >= startRow && ir < startRow + 3 && ic >= startCol && ic < startCol + 3)) {
+                    if (i !== index) cells[i].classList.add('highlight');
+                }
+            }
+        }
+
+        function inputNumber(num) {
+            if (selectedCellIndex === -1) return;
+            
+            const cells = document.querySelectorAll('.cell');
+            const cell = cells[selectedCellIndex];
+            
+            if (cell.classList.contains('fixed')) return;
+
+            let r = Math.floor(selectedCellIndex / 9);
+            let c = selectedCellIndex % 9;
+            
+            if (num === 0) {
+                cell.innerText = '';
+                cell.classList.remove('input', 'error');
+                currentGrid[r][c] = 0;
+                return;
+            }
+
+            cell.innerText = num;
+            currentGrid[r][c] = num;
+            
+            // 检查对错
+            if (solution[r][c] !== num) {
+                cell.classList.add('error');
+                cell.classList.remove('input');
+            } else {
+                cell.classList.remove('error');
+                cell.classList.add('input');
+            }
+            
+            checkWin();
+        }
+
+        function checkWin() {
+            let win = true;
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    if (currentGrid[r][c] !== solution[r][c]) {
+                        win = false;
+                        break;
+                    }
+                }
+            }
+            if (win) {
+                messageEl.innerText = '🎉 恭喜你，完成了解谜！';
+                selectedCellIndex = -1;
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected', 'highlight'));
+            }
+        }
+
+        // 监听实体键盘输入
+        document.addEventListener('keydown', e => {
+            if (e.key >= '1' && e.key <= '9') {
+                inputNumber(parseInt(e.key));
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                inputNumber(0);
+            }
+        });
+
+        // 默认生成简单难度
+        generateGame('easy');
+    </script>
+</body>
+</html>
