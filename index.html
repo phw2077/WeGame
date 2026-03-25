@@ -2,180 +2,113 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>经典贪吃蛇小游戏2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的小游戏乐园</title>
     <style>
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+        }
+        
+        .header {
             background-color: #2c3e50;
-            margin: 0;
-            color: #ecf0f1;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
         }
+
         h1 {
-            margin-bottom: 5px;
-            font-size: 32px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 2px;
         }
-        .score-board {
-            font-size: 20px;
-            margin-bottom: 20px;
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 90%;
+            max-width: 400px;
         }
-        canvas {
-            background-color: #34495e;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            border-radius: 5px;
-            border: 2px solid #7f8c8d;
+
+        .game-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .instructions {
-            margin-top: 20px;
+
+        .game-card:hover, .game-card:active {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .game-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+
+        .game-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .game-desc {
             font-size: 14px;
-            color: #bdc3c7;
+            color: #7f8c8d;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding: 20px;
+            color: #95a5a6;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
-    <h1>🐍 贪吃蛇 🐍</h1>
-    <div class="score-board">当前分数: <span id="score">0</span></div>
-    
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
-    
-    <div class="instructions">使用键盘 ⬆️ ⬇️ ⬅️ ➡️ 或 W A S D 键控制移动方向<br>(注意：如果方向键无效，请先用鼠标点击一下游戏画面)</div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        
-        const gridSize = 20;
-        let snake = [{x: 200, y: 200}];
-        let apple = {x: 100, y: 100};
-        let dx = gridSize;
-        let dy = 0;
-        let score = 0;
-        let gameLoop;
-        let gameOverFlag = false;
+    <div class="header">
+        <h1>🎮 我的小游戏乐园 🎮</h1>
+    </div>
 
-        function drawRect(x, y, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, gridSize - 1, gridSize - 1); // -1 留出一点边距效果
-        }
+    <div class="game-container">
+        <!-- 贪吃蛇入口 -->
+        <a href="snake.html" class="game-card">
+            <div class="game-icon">🐍</div>
+            <div class="game-title">经典贪吃蛇</div>
+            <div class="game-desc">支持键盘与屏幕虚拟按键，随时随地开吃！</div>
+        </a>
 
-        function update() {
-            if (gameOverFlag) return;
+        <!-- 拼图入口 -->
+        <a href="puzzle.html" class="game-card">
+            <div class="game-icon">🧩</div>
+            <div class="game-title">数字滑动拼图</div>
+            <div class="game-desc">经典的 3x3 智力挑战，点击移动数字块。</div>
+        </a>
+    </div>
 
-            // 计算蛇头的新位置
-            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+    <div class="footer">
+        Powered by GitHub Pages & Trae IDE
+    </div>
 
-            // 检查是否撞墙
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-                return gameOver();
-            }
-
-            // 检查是否撞到自己
-            for (let i = 0; i < snake.length; i++) {
-                if (head.x === snake[i].x && head.y === snake[i].y) return gameOver();
-            }
-
-            // 移动蛇头
-            snake.unshift(head);
-
-            // 检查是否吃到苹果
-            if (head.x === apple.x && head.y === apple.y) {
-                score += 10;
-                scoreElement.innerText = score;
-                placeApple();
-            } else {
-                // 如果没吃到，移除蛇尾
-                snake.pop();
-            }
-
-            // 清空画布并重新绘制
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制苹果
-            drawRect(apple.x, apple.y, '#e74c3c');
-            
-            // 绘制蛇身
-            snake.forEach((part, index) => {
-                // 蛇头颜色略深
-                drawRect(part.x, part.y, index === 0 ? '#27ae60' : '#2ecc71');
-            });
-        }
-
-        function placeApple() {
-            apple.x = Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize;
-            apple.y = Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize;
-            
-            // 确保苹果不会生成在蛇身上
-            for (let part of snake) {
-                if (part.x === apple.x && part.y === apple.y) {
-                    return placeApple();
-                }
-            }
-        }
-
-        function gameOver() {
-            gameOverFlag = true;
-            clearInterval(gameLoop);
-            
-            // 绘制半透明黑色蒙层
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制游戏结束文字
-            ctx.fillStyle = '#ecf0f1';
-            ctx.font = 'bold 36px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('游戏结束!', canvas.width / 2, canvas.height / 2 - 20);
-            
-            ctx.font = '20px Arial';
-            ctx.fillText('最终分数: ' + score, canvas.width / 2, canvas.height / 2 + 20);
-            
-            ctx.font = '16px Arial';
-            ctx.fillStyle = '#bdc3c7';
-            ctx.fillText('按任意键重新开始', canvas.width / 2, canvas.height / 2 + 60);
-        }
-
-        function restartGame() {
-            snake = [{x: 200, y: 200}];
-            dx = gridSize;
-            dy = 0;
-            score = 0;
-            scoreElement.innerText = score;
-            gameOverFlag = false;
-            placeApple();
-            gameLoop = setInterval(update, 150);
-        }
-
-        // 监听键盘事件
-        document.addEventListener('keydown', e => {
-            if (gameOverFlag) {
-                restartGame();
-                return;
-            }
-
-            const key = e.key.toLowerCase();
-            
-            // 如果按下的是方向键，阻止网页的默认滚动行为
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                e.preventDefault();
-            }
-
-            // 防止反向移动，同时支持方向键和 WASD 键
-            if ((e.key === 'ArrowUp' || key === 'w') && dy === 0) { dx = 0; dy = -gridSize; }
-            if ((e.key === 'ArrowDown' || key === 's') && dy === 0) { dx = 0; dy = gridSize; }
-            if ((e.key === 'ArrowLeft' || key === 'a') && dx === 0) { dx = -gridSize; dy = 0; }
-            if ((e.key === 'ArrowRight' || key === 'd') && dx === 0) { dx = gridSize; dy = 0; }
-        });
-
-        // 初始化游戏
-        placeApple();
-        gameLoop = setInterval(update, 150); // 控制游戏速度
-    </script>
 </body>
 </html>
