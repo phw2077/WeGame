@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经典数字拼图游戏</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            height: 100vh;
+            justify-content: center;
+        }
+        h1 { 
+            color: #2c3e50; 
+            margin-bottom: 20px; 
+            font-size: 32px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            background-color: #bdc3c7;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .tile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3498db;
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .tile:hover { 
+            background-color: #2980b9; 
+            transform: scale(0.98);
+        }
+        .tile.empty {
+            background-color: transparent;
+            cursor: default;
+            box-shadow: none;
+        }
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        button:hover { 
+            background-color: #27ae60; 
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            min-height: 30px;
+        }
+        .instructions {
+            margin-top: 20px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧩 数字拼图 (3x3)</h1>
+    <div id="board"></div>
+    <div class="controls">
+        <button id="shuffleBtn">重新打乱</button>
+        <div id="message"></div>
+    </div>
+    <div class="instructions">点击与空白方块相邻的数字块进行移动，恢复 1-8 的顺序即可过关。</div>
+
+    <script>
+        const size = 3;
+        // 0 代表空格
+        let board = [1, 2, 3, 4, 5, 6, 7, 8, 0]; 
+        const boardElement = document.getElementById('board');
+        const messageElement = document.getElementById('message');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+
+        // 获取空格（0）的位置索引
+        function getEmptyPos() {
+            return board.indexOf(0);
+        }
+
+        // 获取当前空格允许移动的合法位置（上下左右）
+        function getValidMoves(emptyPos) {
+            const moves = [];
+            const r = Math.floor(emptyPos / size); // 行号 0, 1, 2
+            const c = emptyPos % size;             // 列号 0, 1, 2
+            
+            if (r > 0) moves.push(emptyPos - size); // 上面的格子
+            if (r < size - 1) moves.push(emptyPos + size); // 下面的格子
+            if (c > 0) moves.push(emptyPos - 1); // 左边的格子
+            if (c < size - 1) moves.push(emptyPos + 1); // 右边的格子
+            return moves;
+        }
+
+        // 打乱拼图（通过模拟合法移动来保证拼图绝对有解）
+        function shuffle() {
+            let emptyPos = getEmptyPos();
+            let lastPos = -1; // 记录上一步，防止立即退回原位
+            
+            // 模拟 150 次随机移动
+            for (let i = 0; i < 150; i++) {
+                const moves = getValidMoves(emptyPos);
+                // 尽量不走回头路，增加打乱的效率
+                const filteredMoves = moves.filter(m => m !== lastPos);
+                const nextMoves = filteredMoves.length > 0 ? filteredMoves : moves;
+                const randomMove = nextMoves[Math.floor(Math.random() * nextMoves.length)];
+                
+                // 交换位置
+                [board[emptyPos], board[randomMove]] = [board[randomMove], board[emptyPos]];
+                lastPos = emptyPos;
+                emptyPos = randomMove;
+            }
+            messageElement.textContent = '';
+            render();
+        }
+
+        // 处理点击移动方块
+        function moveTile(index) {
+            const emptyPos = getEmptyPos();
+            const moves = getValidMoves(emptyPos);
+            
+            // 检查点击的方块是否在空格的相邻合法位置
+            if (moves.includes(index)) {
+                // 交换被点击的方块和空格的位置
+                [board[emptyPos], board[index]] = [board[index], board[emptyPos]];
+                render();
+                checkWin();
+            }
+        }
+
+        // 检查是否胜利
+        function checkWin() {
+            // 正确的最终状态是 [1, 2, 3, 4, 5, 6, 7, 8, 0]
+            const isWin = board.every((val, index) => {
+                if (index === board.length - 1) return val === 0; // 最后一个位置应该是 0
+                return val === index + 1; // 其他位置应该是索引 + 1
+            });
+
+            if (isWin) {
+                messageElement.textContent = '🎉 恭喜你，拼图完成！';
+            }
+        }
+
+        // 渲染拼图面板
+        function render() {
+            boardElement.innerHTML = '';
+            board.forEach((val, index) => {
+                const tile = document.createElement('div');
+                tile.classList.add('tile');
+                
+                if (val === 0) {
+                    tile.classList.add('empty');
+                } else {
+                    tile.textContent = val;
+                    // 点击方块时触发移动
+                    tile.addEventListener('click', () => moveTile(index));
+                }
+                boardElement.appendChild(tile);
+            });
+        }
+
+        // 绑定打乱按钮事件
+        shuffleBtn.addEventListener('click', shuffle);
+
+        // 初始化游戏
+        shuffle();
+    </script>
+</body>
+</html>
